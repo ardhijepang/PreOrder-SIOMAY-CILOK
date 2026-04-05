@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PO Cilok Siomay</title>
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2196f3">
+
+  <style>
+    body { font-family: Arial; padding: 10px; }
+    input { margin: 5px; padding: 6px; width: 90%; }
+    button { padding: 8px; margin-top: 5px; }
+    li { margin: 10px 0; }
+  </style>
+</head>
+
+<body>
+
+<h2>📋 PO Cilok & Siomay</h2>
+
+<input type="text" id="nama" placeholder="Nama"><br>
+
+<input type="number" id="cilok" placeholder="Cilok (porsi)">
+<input type="number" id="siomay" placeholder="Siomay (porsi)"><br>
+
+<input type="text" id="catatan" placeholder="Catatan"><br><br>
+
+<button onclick="tambahData()">Tambah Pesanan</button>
+
+<h3>Total Omzet: ¥<span id="total">0</span></h3>
+<h4>Total Cilok: <span id="totalCilok">0</span></h4>
+<h4>Total Siomay: <span id="totalSiomay">0</span></h4>
+
+<h3>📦 Estimasi Bahan</h3>
+<p>Tepung: <span id="tepung">0</span> gram</p>
+<p>Daging: <span id="daging">0</span> gram</p>
+
+<button onclick="exportData()">Export Data</button>
+
+<ul id="list"></ul>
+
+<script>
+let hargaCilok = 300;
+let hargaSiomay = 750;
+
+let data = JSON.parse(localStorage.getItem("po")) || [];
+
+function render() {
+  let list = document.getElementById("list");
+  list.innerHTML = "";
+
+  let total = 0;
+  let totalCilok = 0;
+  let totalSiomay = 0;
+  let tepung = 0;
+  let daging = 0;
+
+  data.forEach((item, index) => {
+    let subtotal = (item.cilok * hargaCilok) + (item.siomay * hargaSiomay);
+
+    total += subtotal;
+    totalCilok += item.cilok;
+    totalSiomay += item.siomay;
+    tepung += item.cilok * 25;
+    daging += item.siomay * 30;
+
+    let li = document.createElement("li");
+
+    li.innerHTML = `
+      <b>${item.nama}</b><br>
+      Cilok: ${item.cilok} | Siomay: ${item.siomay}<br>
+      Catatan: ${item.catatan || "-"}<br>
+      Total: ¥${subtotal}<br>
+      Status: ${item.bayar ? "✔ Sudah Bayar" : "❌ Belum Bayar"}<br>
+      <button onclick="toggleBayar(${index})">Bayar</button>
+      <button onclick="hapus(${index})">Hapus</button>
+    `;
+
+    list.appendChild(li);
+  });
+
+  document.getElementById("total").innerText = total;
+  document.getElementById("totalCilok").innerText = totalCilok;
+  document.getElementById("totalSiomay").innerText = totalSiomay;
+  document.getElementById("tepung").innerText = tepung;
+  document.getElementById("daging").innerText = daging;
+
+  localStorage.setItem("po", JSON.stringify(data));
+}
+
+function tambahData() {
+  let nama = document.getElementById("nama").value;
+  let cilok = parseInt(document.getElementById("cilok").value) || 0;
+  let siomay = parseInt(document.getElementById("siomay").value) || 0;
+  let catatan = document.getElementById("catatan").value;
+
+  if (!nama || (cilok === 0 && siomay === 0)) {
+    alert("Isi minimal 1 pesanan!");
+    return;
+  }
+
+  data.push({ nama, cilok, siomay, catatan, bayar: false });
+  render();
+}
+
+function toggleBayar(i) { data[i].bayar = !data[i].bayar; render(); }
+function hapus(i) { data.splice(i,1); render(); }
+
+function exportData() {
+  let text = "DAFTAR PO\n\n";
+  data.forEach(item => {
+    text += `${item.nama}\nCilok:${item.cilok} | Siomay:${item.siomay}\n\n`;
+  });
+
+  let blob = new Blob([text], { type: "text/plain" });
+  let link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "data-po.txt";
+  link.click();
+}
+
+render();
+
+// PWA
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+
+</body>
+</html>
